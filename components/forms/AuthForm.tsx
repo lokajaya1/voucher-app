@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
 import { useState } from "react";
@@ -19,13 +18,26 @@ export default function AuthForm({ mode }: AuthFormProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (mode === "register" && (!name || !email)) {
-      setError("All fields are required");
-      return;
+    // Validasi form
+    if (mode === "register") {
+      if (!name || !email) {
+        setError("All fields are required");
+        return;
+      }
+
+      if (!/\S+@\S+\.\S+/.test(email)) {
+        setError("Invalid email format");
+        return;
+      }
     }
 
     if (!username || !password) {
       setError("Username and Password are required");
+      return;
+    }
+
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters long");
       return;
     }
 
@@ -51,6 +63,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
 
       router.push(mode === "login" ? "/voucher" : "/login");
     } catch (err) {
+      console.error("Error during form submission:", err);
       setError("Something went wrong. Please try again.");
     }
   };

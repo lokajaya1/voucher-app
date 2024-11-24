@@ -1,23 +1,45 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+generator client {
+  provider = "prisma-client-js"
+}
 
 datasource db {
   provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
-generator client {
-  provider = "prisma-client-js"
+model User {
+  id        Int            @id @default(autoincrement())
+  username  String         @unique
+  password  String
+  name      String?
+  email     String?        @unique
+  createdAt DateTime       @default(now())
+  claims    VoucherClaim[]
+
+  @@map("users")
 }
 
-model User {
-  id       Int     @id @default(autoincrement())
-  username String  @unique
-  password String
-  name     String?
-  email    String? @unique
-  createdAt DateTime @default(now())
+model Voucher {
+  id          Int            @id @default(autoincrement())
+  title       String
+  description String
+  image       String
+  category    String
+  createdAt   DateTime       @default(now())
+  claims      VoucherClaim[]
+
+  @@map("vouchers")
+}
+
+model VoucherClaim {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  voucherId Int
+  claimedAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+  voucher   Voucher  @relation(fields: [voucherId], references: [id])
+
+  @@index([userId], map: "voucher_claims_userId_fkey")
+  @@index([voucherId], map: "voucher_claims_voucherId_fkey")
+  @@map("voucher_claims")
 }
