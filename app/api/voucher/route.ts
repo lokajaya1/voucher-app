@@ -1,27 +1,49 @@
 import { NextResponse } from "next/server";
-import mysql from "mysql2/promise";
+import prisma from "@/lib/prisma"; // Pastikan prisma client diimport dengan benar
 
-const dbConfig = {
-  host: "localhost",
-  user: "root",
-  password: "",
-  database: "horus_loka_db",
-};
-
+// GET endpoint untuk mengambil semua voucher
 export async function GET() {
-  const connection = await mysql.createConnection(dbConfig);
-  const [rows] = await connection.query("SELECT * FROM voucher");
-  await connection.end();
-  return NextResponse.json(rows);
+  try {
+    const vouchers = await prisma.voucher.findMany(); // Mengambil semua voucher
+    return NextResponse.json(vouchers, { status: 200 }); // Mengembalikan status 200
+  } catch (error) {
+    console.error("Error fetching vouchers:", error);
+    return NextResponse.json(
+      { message: "Error fetching vouchers", error: error.message },
+      { status: 500 }
+    ); // Mengembalikan status 500 untuk error
+  }
 }
 
+// POST endpoint untuk klaim voucher
 export async function POST(req: Request) {
-  const { nama, foto, kategori, status } = await req.json();
-  const connection = await mysql.createConnection(dbConfig);
-  await connection.query(
-    "INSERT INTO voucher (nama, foto, kategori, status) VALUES (?, ?, ?, ?)",
-    [nama, foto, kategori, status]
-  );
-  await connection.end();
-  return NextResponse.json({ message: "Voucher added successfully" });
+  try {
+    const { userId, voucherId } = await req.json(); // Parsing body request untuk userId dan voucherId
+
+    if (!userId || !voucherId) {
+      return NextResponse.json(
+        { message: "User ID and Voucher ID are required" },
+        { status: 400 } // Status 400 jika data tidak lengkap
+      );
+    }
+
+    // Menyimpan klaim voucher ke database
+    const claim = await prisma.voucherClaim.create({
+      data: {
+        userId,
+        voucherId,
+      },
+    });
+
+    return NextResponse.json(
+      { message: "Voucher claimed successfully", claim },
+      { status: 201 } // Status 201 untuk berhasil dibuat
+    );
+  } catch (error) {
+    console.error("Error claiming voucher:", error);
+    return NextResponse.json(
+      { message: "Error claiming voucher", error: error.message },
+      { status: 500 } // Status 500 jika ada kesalahan saat klaim
+    );
+  }
 }

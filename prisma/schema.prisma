@@ -14,10 +14,32 @@ generator client {
 }
 
 model User {
-  id       Int     @id @default(autoincrement())
-  username String  @unique
-  password String
-  name     String?
-  email    String? @unique
+  id        Int      @id @default(autoincrement())
+  username  String   @unique
+  password  String
+  name      String?
+  email     String?  @unique
   createdAt DateTime @default(now())
+}
+
+model Voucher {
+  id        Int       @id @default(autoincrement())
+  nama      String
+  foto      String
+  kategori  String
+  status    Boolean
+  createdAt DateTime @default(now())
+
+  claims    Voucher_Claim[] @relation("VoucherClaims")
+}
+
+model Voucher_Claim {
+  id             Int      @id @default(autoincrement()) 
+  id_voucher     Int     
+  tanggal_claim  DateTime @default(now()) 
+
+  voucher        Voucher  @relation("VoucherClaims", fields: [id_voucher], references: [id])
+
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
 }
