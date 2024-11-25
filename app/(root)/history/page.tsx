@@ -1,108 +1,117 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import RightSidebar from "@/components/shared/RightSidebar";
+import { useSession } from "next-auth/react";
+import { Voucher } from "@prisma/client";
+import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 export default function HistoryPage() {
-  const [history, setHistory] = useState([]);
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const [history, setHistory] = useState<Voucher[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Fetch data dari API backend
+  // Redirect to login if user is not authenticated
   useEffect(() => {
-    const fetchHistory = async () => {
-      try {
-        const response = await fetch("/api/voucher-claims"); // Endpoint API klaim voucher
-        if (!response.ok) throw new Error("Failed to fetch history");
-        const data = await response.json();
-        setHistory(data);
-      } catch (error) {
-        console.error(error.message);
+    if (status === "unauthenticated") {
+      router.push("/login");
+    }
+  }, [status, router]);
+
+  // Fetch claimed vouchers for the logged-in user
+  useEffect(() => {
+    if (session?.user) {
+      const fetchHistory = async () => {
+        try {
+          setLoading(true);
+          const response = await fetch(
+            `/api/voucher_claim?userId=${session.user.id}`
+          );
+
+          if (!response.ok) {
+            throw new Error("Failed to fetch claimed vouchers");
+          }
+
+          const data: Voucher[] = await response.json();
+          setHistory(data);
+        } catch (error) {
+          console.error("Error fetching history:", error);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      fetchHistory();
+    }
+  }, [session?.user]);
+
+  // Handle remove voucher from history and restore to available vouchers
+  const handleRemoveClaim = async (id: number) => {
+    try {
+      const response = await fetch(`/api/voucher_claim`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ userId: session?.user.id, voucherId: id }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to remove voucher from claim");
       }
-    };
 
-    fetchHistory();
-  }, []);
+      // Remove the voucher from history and add it back to the available vouchers
+      setHistory((prevHistory) =>
+        prevHistory.filter((voucher) => voucher.id !== id)
+      );
 
-  // Menghapus klaim dari UI
-  const handleRemove = (id) => {
-    setHistory(history.filter((voucher) => voucher.id !== id));
+      // Optionally, you could trigger a re-fetch of the available vouchers or update state
+      console.log("Voucher removed from claim");
+    } catch (error) {
+      console.error("Error removing voucher from claim:", error);
+    }
   };
 
-  // Menghitung jumlah klaim per kategori
-  const categoryCounts = history.reduce((counts, item) => {
-    counts[item.category] = (counts[item.category] || 0) + 1;
-    return counts;
-  }, {});
+  if (loading) {
+    return <p>Loading claimed vouchers...</p>;
+  }
 
   return (
-    <div className="flex">
-      {/* Main Content */}
-      <main className="flex-1 px-6 py-8">
-        <h1 className="text-3xl font-bold text-center mb-6">
-          Claimed Vouchers
-        </h1>
-
-        {history.length > 0 ? (
-          <div className="flex flex-col gap-6">
-            <table className="w-full border-collapse border border-gray-300">
-              <thead>
-                <tr className="bg-gray-100">
-                  <th className="border border-gray-300 p-2 text-left">
-                    Title
-                  </th>
-                  <th className="border border-gray-300 p-2 text-left">
-                    Category
-                  </th>
-                  <th className="border border-gray-300 p-2 text-left">
-                    Claimed At
-                  </th>
-                  <th className="border border-gray-300 p-2 text-left">
-                    Action
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {history.map((voucher) => (
-                  <tr key={voucher.id}>
-                    <td className="border border-gray-300 p-2">
-                      {voucher.title}
-                    </td>
-                    <td className="border border-gray-300 p-2">
-                      {voucher.category}
-                    </td>
-                    <td className="border border-gray-300 p-2">
-                      {new Date(voucher.claimedAt).toLocaleDateString()}
-                    </td>
-                    <td className="border border-gray-300 p-2">
-                      <button
-                        onClick={() => handleRemove(voucher.id)}
-                        className="text-red-500 hover:underline"
-                      >
-                        Remove
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            <div className="bg-gray-100 p-4 rounded-md">
-              <h2 className="text-xl font-bold">Statistics</h2>
-              <ul className="list-disc ml-6 mt-2">
-                {Object.entries(categoryCounts).map(([category, count]) => (
-                  <li key={category}>
-                    {category}: {count}
-                  </li>
-                ))}
-              </ul>
+    <div>
+      <h1 className="text-3xl font-bold text-center mb-6">
+        Your Claimed Vouchers
+      </h1>
+      {history.length > 0 ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {history.map((voucher) => (
+            <div
+              key={voucher.id}
+              className="border rounded-lg shadow-md overflow-hidden bg-white"
+            >
+              <Image
+                src={voucher.foto}
+                alt={voucher.nama}
+                width={500}
+                height={300}
+                className="w-full h-48 object-cover"
+              />
+              <div className="p-4">
+                <h2 className="text-lg font-bold mb-2">{voucher.nama}</h2>
+                <p className="text-sm text-gray-600 mb-4">{voucher.kategori}</p>
+                <button
+                  onClick={() => handleRemoveClaim(voucher.id)}
+                  className="w-full bg-red-500 text-white py-2 rounded-md hover:bg-red-400"
+                >
+                  Remove Claim
+                </button>
+              </div>
             </div>
-          </div>
-        ) : (
-          <p className="text-center text-gray-500">No claimed vouchers yet.</p>
-        )}
-      </main>
-
-      {/* Right Sidebar */}
-      <RightSidebar claimedVouchers={history} />
+          ))}
+        </div>
+      ) : (
+        <p>No vouchers claimed yet.</p>
+      )}
     </div>
   );
 }

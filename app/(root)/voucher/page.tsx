@@ -13,17 +13,18 @@ export default function VoucherPage() {
 
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
   const [filteredVouchers, setFilteredVouchers] = useState<Voucher[]>([]);
-  const [category, setCategory] = useState("All");
   const [history, setHistory] = useState<Voucher[]>([]);
+  const [category, setCategory] = useState("All");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [claimingId, setClaimingId] = useState<number | null>(null);
 
   // Fetch vouchers from API
   useEffect(() => {
     const fetchVouchers = async () => {
       try {
         setLoading(true);
-        setError(null); // Reset error state before fetching
+        setError(null);
         const response = await fetch("/api/voucher");
 
         if (!response.ok) {
@@ -34,8 +35,12 @@ export default function VoucherPage() {
         setVouchers(data);
         setFilteredVouchers(data);
       } catch (err) {
-        setError("Error fetching vouchers. Please try again later.");
-        console.error(err instanceof Error ? err.message : "Unknown error");
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Unknown error occurred while fetching vouchers."
+        );
+        console.error(err);
       } finally {
         setLoading(false);
       }
@@ -68,25 +73,36 @@ export default function VoucherPage() {
       return;
     }
 
+    setClaimingId(id); // Set loading state for specific voucher
     try {
-      const response = await fetch("/api/voucher_claim", {
+      const response = await fetch(`/api/voucher/${id}/claim`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: session.user.id, // ID pengguna
-          voucherId: id, // ID voucher
-        }),
       });
 
       if (!response.ok) {
-        throw new Error("Error claiming voucher");
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Error claiming voucher");
       }
 
       const result = await response.json();
       console.log("Claim successful:", result);
-      // Update UI
+
+      // Update state: remove voucher from filtered list and add to history
+      const claimedVoucher = vouchers.find((voucher) => voucher.id === id);
+      if (claimedVoucher) {
+        setFilteredVouchers((prevVouchers) =>
+          prevVouchers.filter((voucher) => voucher.id !== id)
+        );
+        setHistory((prevHistory) => [...prevHistory, claimedVoucher]);
+      }
     } catch (error) {
       console.error("Error claiming voucher:", error);
+      alert(
+        error instanceof Error ? error.message : "Failed to claim voucher."
+      );
+    } finally {
+      setClaimingId(null); // Clear loading state
     }
   };
 
@@ -135,9 +151,14 @@ export default function VoucherPage() {
                   </p>
                   <button
                     onClick={() => handleClaim(voucher.id)}
-                    className="w-full bg-black text-white py-2 rounded-md hover:bg-gray-800"
+                    disabled={claimingId === voucher.id}
+                    className={`w-full py-2 rounded-md ${
+                      claimingId === voucher.id
+                        ? "bg-gray-500 cursor-not-allowed"
+                        : "bg-black text-white hover:bg-gray-800"
+                    }`}
                   >
-                    Claim
+                    {claimingId === voucher.id ? "Claiming..." : "Claim"}
                   </button>
                 </div>
               </div>
@@ -146,18 +167,6 @@ export default function VoucherPage() {
             <p>No vouchers available.</p>
           )}
         </div>
-
-        {/* Display claimed vouchers */}
-        {history.length > 0 && (
-          <div className="mt-10">
-            <h2 className="text-2xl font-bold">Claimed Vouchers</h2>
-            <ul className="list-disc ml-6 mt-2">
-              {history.map((item) => (
-                <li key={item.id}>{item.nama}</li>
-              ))}
-            </ul>
-          </div>
-        )}
       </main>
     </div>
   );
