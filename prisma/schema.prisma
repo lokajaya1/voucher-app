@@ -4,13 +4,13 @@
 // Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
+generator client {
+  provider = "prisma-client-js"
+}
+
 datasource db {
   provider = "mysql"
   url      = env("DATABASE_URL")
-}
-
-generator client {
-  provider = "prisma-client-js"
 }
 
 model User {
@@ -20,26 +20,35 @@ model User {
   name      String?
   email     String?  @unique
   createdAt DateTime @default(now())
+
+  // Relasi dengan Voucher_Claim
+  claims Voucher_Claim[] @relation("UserClaims")
 }
 
 model Voucher {
-  id        Int       @id @default(autoincrement())
+  id        Int      @id @default(autoincrement())
   nama      String
   foto      String
   kategori  String
   status    Boolean
   createdAt DateTime @default(now())
 
-  claims    Voucher_Claim[] @relation("VoucherClaims")
+  claims Voucher_Claim[] @relation("VoucherClaims")
 }
 
 model Voucher_Claim {
-  id             Int      @id @default(autoincrement()) 
-  id_voucher     Int     
-  tanggal_claim  DateTime @default(now()) 
+  id            Int      @id @default(autoincrement())
+  id_voucher    Int
+  id_user       Int
+  tanggal_claim DateTime @default(now())
+  status        String   @default("claimed")
 
-  voucher        Voucher  @relation("VoucherClaims", fields: [id_voucher], references: [id])
+  // Relasi dengan Voucher
+  voucher Voucher @relation("VoucherClaims", fields: [id_voucher], references: [id])
 
-  created_at     DateTime @default(now())
-  updated_at     DateTime @updatedAt
+  // Relasi dengan User
+  user User @relation("UserClaims", fields: [id_user], references: [id])
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
 }

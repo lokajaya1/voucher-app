@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import LeftSidebar from "@/components/shared/LeftSidebar";
 import { Voucher } from "@prisma/client"; // Import model Voucher from Prisma
-import Image from "next/image"; // Import Image from next/image
+import Image from "next/image";
 
 export default function VoucherPage() {
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
@@ -80,7 +80,7 @@ export default function VoucherPage() {
       <LeftSidebar onCategorySelect={handleCategorySelect} />
 
       {/* Main Content */}
-      <main className="flex-1 px-6 py-8">
+      <main className="flex-1 px-2 py-2">
         <h1 className="text-3xl font-bold text-center mb-6">
           Available Vouchers
         </h1>

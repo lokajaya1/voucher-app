@@ -26,7 +26,7 @@ const LeftSidebar = ({
   };
 
   return (
-    <aside className="w-64 bg-gray-100 p-4 border-r border-gray-200 flex flex-col justify-between h-full">
+    <aside className="w-64 bg-gray-100 custom-scrollbar sticky left-0 top-0 h-screen flex flex-col overflow-y-auto border-r p-6 pt-16 shadow-lg shadow-gray-500/50">
       {/* Kategori */}
       <div>
         <h2 className="text-lg font-bold mb-4">Categories</h2>
