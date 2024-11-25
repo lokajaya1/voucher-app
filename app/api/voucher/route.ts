@@ -1,27 +1,62 @@
 import { NextResponse } from "next/server";
-import mysql from "mysql2/promise";
-
-const dbConfig = {
-  host: "localhost",
-  user: "root",
-  password: "",
-  database: "horus_loka_db",
-};
+import prisma from "@/lib/prisma";
 
 export async function GET() {
-  const connection = await mysql.createConnection(dbConfig);
-  const [rows] = await connection.query("SELECT * FROM voucher");
-  await connection.end();
-  return NextResponse.json(rows);
+  try {
+    const vouchers = await prisma.voucher.findMany();
+    return NextResponse.json(vouchers, { status: 200 });
+  } catch (error) {
+    if (error instanceof Error) {
+      console.error("Error fetching vouchers:", error.message);
+      return NextResponse.json(
+        { message: "Error fetching vouchers", error: error.message },
+        { status: 500 }
+      );
+    }
+
+    console.error("Unknown error occurred:", error);
+    return NextResponse.json(
+      { message: "Unknown error occurred" },
+      { status: 500 }
+    );
+  }
 }
 
 export async function POST(req: Request) {
-  const { nama, foto, kategori, status } = await req.json();
-  const connection = await mysql.createConnection(dbConfig);
-  await connection.query(
-    "INSERT INTO voucher (nama, foto, kategori, status) VALUES (?, ?, ?, ?)",
-    [nama, foto, kategori, status]
-  );
-  await connection.end();
-  return NextResponse.json({ message: "Voucher added successfully" });
+  try {
+    const { id_user, id_voucher } = await req.json();
+
+    if (!id_user || !id_voucher) {
+      return NextResponse.json(
+        { message: "User ID and Voucher ID are required" },
+        { status: 400 }
+      );
+    }
+
+    const claim = await prisma.voucher_Claim.create({
+      data: {
+        id_user,
+        id_voucher,
+      },
+    });
+
+    return NextResponse.json(
+      { message: "Voucher claimed successfully", claim },
+      { status: 201 }
+    );
+  } catch (error) {
+    if (error instanceof Error) {
+      console.error("Error claiming voucher:", error.message);
+      return NextResponse.json(
+        { message: "Error claiming voucher", error: error.message },
+        { status: 500 }
+      );
+    }
+
+    console.error("Unknown error occurred:", error);
+    return NextResponse.json(
+      { message: "Unknown error occurred" },
+      { status: 500 }
+    );
+  }
 }

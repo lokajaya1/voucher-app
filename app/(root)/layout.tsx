@@ -1,0 +1,27 @@
+import Navbar from "@/components/shared/navbar/Navbar";
+
+export const metadata = {
+  title: "Voucher App",
+  description: "Manage your vouchers and claims",
+};
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <main className="bg-white text-black">
+      {/* Navbar */}
+      <Navbar />
+
+      {/* Layout Body */}
+      <div className="flex">
+        {/* Main Content */}
+        <section className="flex min-h-screen flex-1 flex-col pb-6 pt-6 max-md:pb-14">
+          <div className="mx-auto w-full">{children}</div>
+        </section>
+      </div>
+    </main>
+  );
+}

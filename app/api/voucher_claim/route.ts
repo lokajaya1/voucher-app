@@ -1,27 +1,62 @@
 import { NextResponse } from "next/server";
-import mysql from "mysql2/promise";
+import prisma from "@/lib/prisma";
 
-const dbConfig = {
-  host: "localhost",
-  user: "root",
-  password: "",
-  database: "horus_loka_db",
-};
-
+// GET: Mengambil data klaim dengan relasi user dan voucher
 export async function GET() {
-  const connection = await mysql.createConnection(dbConfig);
-  const [rows] = await connection.query("SELECT * FROM voucher_claim");
-  await connection.end();
-  return NextResponse.json(rows);
+  try {
+    const claims = await prisma.voucher_Claim.findMany({
+      include: {
+        voucher: true,
+        user: true,
+      },
+    });
+
+    const formattedClaims = claims.map((claim) => ({
+      id: claim.id,
+      voucherName: claim.voucher.nama,
+      category: claim.voucher.kategori,
+      claimedAt: claim.tanggal_claim,
+      username: claim.user.username,
+    }));
+
+    return NextResponse.json(formattedClaims);
+  } catch (error) {
+    console.error("Error fetching voucher claims:", error);
+    return NextResponse.json(
+      { message: "Error fetching claims" },
+      { status: 500 }
+    );
+  }
 }
 
+// POST: Menambahkan klaim baru
 export async function POST(req: Request) {
-  const { id_voucher } = await req.json();
-  const connection = await mysql.createConnection(dbConfig);
-  await connection.query(
-    "INSERT INTO voucher_claim (id_voucher, tanggal_claim) VALUES (?, NOW())",
-    [id_voucher]
-  );
-  await connection.end();
-  return NextResponse.json({ message: "Voucher claimed successfully" });
+  try {
+    const { id_voucher, id_user } = await req.json();
+
+    if (!id_voucher || !id_user) {
+      return NextResponse.json(
+        { message: "Voucher ID and User ID are required" },
+        { status: 400 }
+      );
+    }
+
+    const newClaim = await prisma.voucher_Claim.create({
+      data: {
+        id_voucher,
+        id_user,
+      },
+    });
+
+    return NextResponse.json({
+      message: "Voucher claimed successfully",
+      newClaim,
+    });
+  } catch (error) {
+    console.error("Error creating claim:", error);
+    return NextResponse.json(
+      { message: "Error creating claim" },
+      { status: 500 }
+    );
+  }
 }
