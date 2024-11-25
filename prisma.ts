@@ -1,7 +1,20 @@
 import { PrismaClient } from "@prisma/client";
 
-const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
+// Definisikan tipe untuk globalThis
+interface GlobalPrisma {
+  prisma: PrismaClient | undefined;
+}
 
-export const prisma = globalForPrisma.prisma || new PrismaClient();
+// Tambahkan properti global secara eksplisit
+const globalForPrisma = globalThis as typeof globalThis & GlobalPrisma;
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+// Cegah multiple instantiation di lingkungan pengembangan
+export const prisma =
+  globalForPrisma.prisma ||
+  new PrismaClient({
+    log: ["query", "info", "warn", "error"], // Tambahkan logging untuk debugging
+  });
+
+if (process.env.NODE_ENV !== "production") {
+  globalForPrisma.prisma = prisma;
+}

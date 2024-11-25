@@ -14,7 +14,7 @@ export default function VoucherPage() {
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
   const [filteredVouchers, setFilteredVouchers] = useState<Voucher[]>([]);
   const [category, setCategory] = useState("All");
-  const [history, setHistory] = useState<Voucher[]>([]); // Voucher yang sudah diklaim
+  const [history, setHistory] = useState<Voucher[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -23,14 +23,19 @@ export default function VoucherPage() {
     const fetchVouchers = async () => {
       try {
         setLoading(true);
+        setError(null); // Reset error state before fetching
         const response = await fetch("/api/voucher");
-        if (!response.ok) throw new Error("Failed to fetch vouchers");
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch vouchers");
+        }
+
         const data: Voucher[] = await response.json();
         setVouchers(data);
-        setFilteredVouchers(data); // Set both vouchers and filtered vouchers
-      } catch (error) {
+        setFilteredVouchers(data);
+      } catch (err) {
         setError("Error fetching vouchers. Please try again later.");
-        console.error(error instanceof Error ? error.message : "Unknown error");
+        console.error(err instanceof Error ? err.message : "Unknown error");
       } finally {
         setLoading(false);
       }
@@ -39,7 +44,7 @@ export default function VoucherPage() {
     fetchVouchers();
   }, []);
 
-  // Redirect user to login if not authenticated
+  // Redirect user to login if unauthenticated
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/login");
@@ -63,33 +68,24 @@ export default function VoucherPage() {
       return;
     }
 
-    const userId = session.user.id; // ID pengguna dari session
-    const claimedVoucher = vouchers.find((voucher) => voucher.id === id);
-    if (!claimedVoucher) {
-      console.error("Voucher not found");
-      return;
-    }
-
     try {
-      const response = await fetch("/api/voucher", {
+      const response = await fetch("/api/voucher_claim", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, voucherId: id }),
+        body: JSON.stringify({
+          userId: session.user.id, // ID pengguna
+          voucherId: id, // ID voucher
+        }),
       });
 
-      if (!response.ok) throw new Error("Error claiming voucher");
+      if (!response.ok) {
+        throw new Error("Error claiming voucher");
+      }
 
-      // Update UI after successful claim
-      setHistory((prev) => [...prev, claimedVoucher]); // Add to history
-      const updatedVouchers = vouchers.filter((voucher) => voucher.id !== id); // Remove from available vouchers
-      setVouchers(updatedVouchers);
-      setFilteredVouchers(
-        updatedVouchers.filter(
-          (voucher) => voucher.kategori === category || category === "All"
-        )
-      );
+      const result = await response.json();
+      console.log("Claim successful:", result);
+      // Update UI
     } catch (error) {
-      setError("Error claiming voucher. Please try again.");
       console.error("Error claiming voucher:", error);
     }
   };
@@ -99,7 +95,7 @@ export default function VoucherPage() {
   }
 
   if (error) {
-    return <p>{error}</p>;
+    return <p className="text-red-500">{error}</p>;
   }
 
   if (!session?.user) {

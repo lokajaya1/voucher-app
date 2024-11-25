@@ -1,64 +1,39 @@
-import { NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 
-// GET: Mengambil data klaim dengan relasi user dan voucher
-export async function GET() {
+export async function POST(req: NextRequest) {
   try {
-    const claims = await prisma.voucher_Claim.findMany({
-      include: {
-        voucher: true,
-        user: true,
-      },
-    });
+    // Parsing JSON dari request
+    const { userId, voucherId } = await req.json();
 
-    const formattedClaims = claims.map((claim) => ({
-      id: claim.id,
-      voucherName: claim.voucher.nama,
-      category: claim.voucher.kategori,
-      claimedAt: claim.tanggal_claim,
-      status: claim.status,
-      username: claim.user.username,
-    }));
-
-    return NextResponse.json(formattedClaims);
-  } catch (error) {
-    console.error("Error fetching voucher claims:", error);
-    return NextResponse.json(
-      { message: "Error fetching claims" },
-      { status: 500 }
-    );
-  }
-}
-
-export async function POST(req: Request) {
-  try {
-    const { id_voucher, id_user } = await req.json();
-
-    console.log("Received data:", { id_voucher, id_user });
-
-    if (!id_voucher || !id_user) {
+    if (!userId || !voucherId) {
       return NextResponse.json(
-        { message: "Voucher ID and User ID are required" },
+        { message: "Invalid payload: userId and voucherId are required" },
         { status: 400 }
       );
     }
 
-    const newClaim = await prisma.voucher_Claim.create({
+    // Debug log payload
+    console.log("Received payload:", { userId, voucherId });
+
+    // Buat klaim voucher
+    const claim = await prisma.voucher_Claim.create({
       data: {
-        id_voucher,
-        id_user,
-        status: "claimed",
+        id_user: parseInt(userId, 10),
+        id_voucher: parseInt(voucherId, 10),
+        tanggal_claim: new Date(),
+        status: "PENDING", // Contoh default status
       },
     });
 
-    return NextResponse.json({
-      message: "Voucher claimed successfully",
-      newClaim,
-    });
+    return NextResponse.json({ claim }, { status: 201 });
   } catch (error) {
-    console.error("Error creating claim:", error); // Pastikan log ini muncul
+    console.error("Error creating claim:", error);
     return NextResponse.json(
-      { message: "Error creating claim" },
+      {
+        message: "Error creating claim",
+        error: error instanceof Error ? error.message : "Unknown error",
+      },
       { status: 500 }
     );
   }
