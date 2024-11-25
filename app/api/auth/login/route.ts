@@ -1,45 +1,60 @@
 import { NextResponse } from "next/server";
+import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
-import prisma from "@/lib/prisma"; // File yang sama seperti sebelumnya
+import jwt from "jsonwebtoken";
 
-export async function POST(req: Request) {
-  const { username, password } = await req.json();
+export async function POST(request: Request) {
+  const body = await request.json();
+  const { username, password } = body;
 
   if (!username || !password) {
     return NextResponse.json(
-      { message: "Username and password are required" },
+      { message: "Username and password are required." },
       { status: 400 }
     );
   }
 
   try {
+    // Cari user berdasarkan username
     const user = await prisma.user.findUnique({
       where: { username },
     });
 
     if (!user) {
-      return NextResponse.json({ message: "User not found" }, { status: 404 });
-    }
-
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-
-    if (!isPasswordValid) {
       return NextResponse.json(
-        { message: "Invalid credentials" },
+        { message: "Invalid username or password." },
         { status: 401 }
       );
     }
 
-    return NextResponse.json({
-      message: "Login successful",
-      user: { id: user.id, username: user.username },
-    });
-  } catch (error) {
+    // Validasi password
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return NextResponse.json(
+        { message: "Invalid username or password." },
+        { status: 401 }
+      );
+    }
+
+    // Buat token JWT
+    const token = jwt.sign(
+      { id: user.id, username: user.username, name: user.name },
+      process.env.JWT_SECRET!,
+      { expiresIn: "1h" }
+    );
+
     return NextResponse.json(
       {
-        message: "Login failed",
-        error: error instanceof Error ? error.message : "Unknown error",
+        message: "Login successful.",
+        token,
+        user: { id: user.id, username: user.username, name: user.name },
       },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("Login error:", error);
+    return NextResponse.json(
+      { message: "Internal server error." },
       { status: 500 }
     );
   }

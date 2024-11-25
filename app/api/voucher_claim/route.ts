@@ -16,6 +16,7 @@ export async function GET() {
       voucherName: claim.voucher.nama,
       category: claim.voucher.kategori,
       claimedAt: claim.tanggal_claim,
+      status: claim.status,
       username: claim.user.username,
     }));
 
@@ -29,10 +30,11 @@ export async function GET() {
   }
 }
 
-// POST: Menambahkan klaim baru
 export async function POST(req: Request) {
   try {
     const { id_voucher, id_user } = await req.json();
+
+    console.log("Received data:", { id_voucher, id_user });
 
     if (!id_voucher || !id_user) {
       return NextResponse.json(
@@ -45,6 +47,7 @@ export async function POST(req: Request) {
       data: {
         id_voucher,
         id_user,
+        status: "claimed",
       },
     });
 
@@ -53,7 +56,7 @@ export async function POST(req: Request) {
       newClaim,
     });
   } catch (error) {
-    console.error("Error creating claim:", error);
+    console.error("Error creating claim:", error); // Pastikan log ini muncul
     return NextResponse.json(
       { message: "Error creating claim" },
       { status: 500 }

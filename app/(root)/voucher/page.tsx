@@ -1,55 +1,76 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import LeftSidebar from "@/components/shared/LeftSidebar";
-import { Voucher } from "@prisma/client"; // Import model Voucher from Prisma
+import { Voucher } from "@prisma/client";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 
 export default function VoucherPage() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
   const [filteredVouchers, setFilteredVouchers] = useState<Voucher[]>([]);
   const [category, setCategory] = useState("All");
-  const [history, setHistory] = useState<Voucher[]>([]); // Menyimpan voucher yang diklaim
+  const [history, setHistory] = useState<Voucher[]>([]); // Voucher yang sudah diklaim
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Fetch vouchers from API
   useEffect(() => {
     const fetchVouchers = async () => {
       try {
+        setLoading(true);
         const response = await fetch("/api/voucher");
         if (!response.ok) throw new Error("Failed to fetch vouchers");
-        const data: Voucher[] = await response.json(); // Menentukan tipe data yang diterima
+        const data: Voucher[] = await response.json();
         setVouchers(data);
-        setFilteredVouchers(data); // Set initial filtered vouchers to all vouchers
+        setFilteredVouchers(data); // Set both vouchers and filtered vouchers
       } catch (error) {
+        setError("Error fetching vouchers. Please try again later.");
         console.error(error instanceof Error ? error.message : "Unknown error");
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchVouchers();
   }, []);
 
+  // Redirect user to login if not authenticated
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/login");
+    }
+  }, [status, router]);
+
   // Filter vouchers by category
   const handleCategorySelect = (selectedCategory: string) => {
     setCategory(selectedCategory);
-    if (selectedCategory === "All") {
-      setFilteredVouchers(vouchers);
-    } else {
-      setFilteredVouchers(
-        vouchers.filter((voucher) => voucher.kategori === selectedCategory)
-      );
-    }
+    setFilteredVouchers(
+      selectedCategory === "All"
+        ? vouchers
+        : vouchers.filter((voucher) => voucher.kategori === selectedCategory)
+    );
   };
 
   // Handle voucher claim
   const handleClaim = async (id: number) => {
-    const userId = 2; // Ganti dengan ID pengguna yang sedang login
-    try {
-      const claimedVoucher = vouchers.find((voucher) => voucher.id === id);
-      if (!claimedVoucher) {
-        throw new Error("Voucher not found");
-      }
+    if (!session?.user) {
+      console.error("User is not authenticated");
+      return;
+    }
 
-      // Save claim to database
+    const userId = session.user.id; // ID pengguna dari session
+    const claimedVoucher = vouchers.find((voucher) => voucher.id === id);
+    if (!claimedVoucher) {
+      console.error("Voucher not found");
+      return;
+    }
+
+    try {
       const response = await fetch("/api/voucher", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -58,11 +79,9 @@ export default function VoucherPage() {
 
       if (!response.ok) throw new Error("Error claiming voucher");
 
-      // Update UI: Add claimed voucher to history and remove from available vouchers
-      setHistory((prevHistory) => [...prevHistory, claimedVoucher]);
-
-      // Remove claimed voucher from available vouchers
-      const updatedVouchers = vouchers.filter((voucher) => voucher.id !== id);
+      // Update UI after successful claim
+      setHistory((prev) => [...prev, claimedVoucher]); // Add to history
+      const updatedVouchers = vouchers.filter((voucher) => voucher.id !== id); // Remove from available vouchers
       setVouchers(updatedVouchers);
       setFilteredVouchers(
         updatedVouchers.filter(
@@ -70,9 +89,22 @@ export default function VoucherPage() {
         )
       );
     } catch (error) {
+      setError("Error claiming voucher. Please try again.");
       console.error("Error claiming voucher:", error);
     }
   };
+
+  if (loading) {
+    return <p>Loading vouchers...</p>;
+  }
+
+  if (error) {
+    return <p>{error}</p>;
+  }
+
+  if (!session?.user) {
+    return <p>You must be logged in to view vouchers.</p>;
+  }
 
   return (
     <div className="flex">
@@ -85,6 +117,7 @@ export default function VoucherPage() {
           Available Vouchers
         </h1>
 
+        {/* Display vouchers */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredVouchers.length > 0 ? (
             filteredVouchers.map((voucher) => (

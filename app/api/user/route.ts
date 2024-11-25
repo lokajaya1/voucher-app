@@ -1,49 +1,123 @@
 import { NextResponse } from "next/server";
-import prisma from "@/lib/prisma"; // Pastikan Prisma Client sudah diatur di lib/prisma.ts
+import prisma from "@/lib/prisma";
+import { hash } from "bcryptjs";
+import { z } from "zod"; // For input validation
 
-// GET: Mengambil semua user
+// Schema validation for user input
+const UserSchema = z.object({
+  username: z.string().min(3, "Username must be at least 3 characters"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  email: z.string().email("Invalid email address"),
+  name: z.string().min(2, "Name must be at least 2 characters"),
+});
+
+// Type for validated user input
+type UserInput = z.infer<typeof UserSchema>;
+
 export async function GET() {
   try {
-    const users = await prisma.user.findMany(); // Mengambil semua data user
+    // Fetch users without sensitive information
+    const users = await prisma.user.findMany({
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        name: true,
+        createdAt: true,
+        // Exclude password field
+      },
+    });
+
     return NextResponse.json(users);
   } catch (error) {
     console.error("Error fetching users:", error);
     return NextResponse.json(
-      { message: "Error fetching users" },
+      { error: "Failed to fetch users" },
       { status: 500 }
     );
   }
 }
 
-// POST: Menambahkan user baru
 export async function POST(req: Request) {
   try {
-    const { username, password, email, name } = await req.json();
+    const body = await req.json();
 
-    // Validasi data input
-    if (!username || !password || !email || !name) {
+    // Validate input data
+    const validationResult = UserSchema.safeParse(body);
+
+    if (!validationResult.success) {
       return NextResponse.json(
-        { message: "All fields are required" },
+        {
+          error: "Validation failed",
+          details: validationResult.error.errors,
+        },
         { status: 400 }
       );
     }
 
-    // Menambahkan data user ke database
-    const newUser = await prisma.user.create({
-      data: {
-        username,
-        password,
-        email,
-        name,
+    const { username, password, email, name } = validationResult.data;
+
+    // Check if user already exists
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        OR: [{ username }, { email }],
       },
     });
 
-    return NextResponse.json({
-      message: "User added successfully",
-      user: newUser,
+    if (existingUser) {
+      return NextResponse.json(
+        {
+          error: "User already exists",
+          detail:
+            existingUser.email === email
+              ? "Email already in use"
+              : "Username already taken",
+        },
+        { status: 409 }
+      );
+    }
+
+    // Hash password
+    const hashedPassword = await hash(password, 12);
+
+    // Create new user
+    const newUser = await prisma.user.create({
+      data: {
+        username,
+        password: hashedPassword,
+        email,
+        name,
+      },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        name: true,
+        createdAt: true,
+        // Exclude password from response
+      },
     });
+
+    return NextResponse.json(
+      {
+        message: "User created successfully",
+        user: newUser,
+      },
+      { status: 201 }
+    );
   } catch (error) {
-    console.error("Error adding user:", error);
-    return NextResponse.json({ message: "Error adding user" }, { status: 500 });
+    console.error("Error creating user:", error);
+
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: "Invalid input", details: error.errors },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json(
+      { error: "Failed to create user" },
+      { status: 500 }
+    );
   }
 }

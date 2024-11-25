@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
-import prisma from "@/lib/prisma"; // Import Prisma Client
+import prisma from "@/lib/prisma";
 
-// GET: Mendapatkan semua voucher
 export async function GET() {
   try {
     const vouchers = await prisma.voucher.findMany();

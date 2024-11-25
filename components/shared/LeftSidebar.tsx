@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation"; // Import useRouter
 import { SIDEBAR_LINKS } from "@/constants";
 import Link from "next/link";
+import { signOut } from "next-auth/react"; // Import signOut dari NextAuth
 
 const LeftSidebar = ({
   onCategorySelect,
@@ -18,11 +19,14 @@ const LeftSidebar = ({
     onCategorySelect(category); // Mengirimkan kategori ke parent
   };
 
-  // Fungsi logout untuk mengarahkan ke halaman autentikasi
-  const handleLogout = () => {
-    // Clear any authentication data if needed (like removing tokens)
-    // Redirect ke halaman login
-    router.push("/");
+  // Fungsi logout untuk menghapus session dan redirect ke login
+  const handleLogout = async () => {
+    try {
+      await signOut({ redirect: false }); // Hapus session di backend
+      router.push("/"); // Redirect ke halaman login
+    } catch (error) {
+      console.error("Error during logout:", error);
+    }
   };
 
   return (
