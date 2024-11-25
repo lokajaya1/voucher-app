@@ -21,7 +21,7 @@ export default function VoucherPage() {
         setVouchers(data);
         setFilteredVouchers(data); // Set initial filtered vouchers to all vouchers
       } catch (error) {
-        console.error(error.message);
+        console.error(error instanceof Error ? error.message : "Unknown error");
       }
     };
 
@@ -42,7 +42,7 @@ export default function VoucherPage() {
 
   // Handle voucher claim
   const handleClaim = async (id: number) => {
-    const userId = 1; // Ganti dengan ID pengguna yang sedang login
+    const userId = 2; // Ganti dengan ID pengguna yang sedang login
     try {
       const claimedVoucher = vouchers.find((voucher) => voucher.id === id);
       if (!claimedVoucher) {

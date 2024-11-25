@@ -1,27 +1,49 @@
 import { NextResponse } from "next/server";
-import mysql from "mysql2/promise";
+import prisma from "@/lib/prisma"; // Pastikan Prisma Client sudah diatur di lib/prisma.ts
 
-const dbConfig = {
-  host: "localhost",
-  user: "root",
-  password: "",
-  database: "horus_loka_db",
-};
-
+// GET: Mengambil semua user
 export async function GET() {
-  const connection = await mysql.createConnection(dbConfig);
-  const [rows] = await connection.query("SELECT * FROM user");
-  await connection.end();
-  return NextResponse.json(rows);
+  try {
+    const users = await prisma.user.findMany(); // Mengambil semua data user
+    return NextResponse.json(users);
+  } catch (error) {
+    console.error("Error fetching users:", error);
+    return NextResponse.json(
+      { message: "Error fetching users" },
+      { status: 500 }
+    );
+  }
 }
 
+// POST: Menambahkan user baru
 export async function POST(req: Request) {
-  const { username, password, email, nama } = await req.json();
-  const connection = await mysql.createConnection(dbConfig);
-  await connection.query(
-    "INSERT INTO user (username, password, email, nama) VALUES (?, ?, ?, ?)",
-    [username, password, email, nama]
-  );
-  await connection.end();
-  return NextResponse.json({ message: "User added successfully" });
+  try {
+    const { username, password, email, name } = await req.json();
+
+    // Validasi data input
+    if (!username || !password || !email || !name) {
+      return NextResponse.json(
+        { message: "All fields are required" },
+        { status: 400 }
+      );
+    }
+
+    // Menambahkan data user ke database
+    const newUser = await prisma.user.create({
+      data: {
+        username,
+        password,
+        email,
+        name,
+      },
+    });
+
+    return NextResponse.json({
+      message: "User added successfully",
+      user: newUser,
+    });
+  } catch (error) {
+    console.error("Error adding user:", error);
+    return NextResponse.json({ message: "Error adding user" }, { status: 500 });
+  }
 }
