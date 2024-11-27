@@ -4,6 +4,7 @@ export default function Page() {
   return (
     <div className="container grid items-center gap-4 px-4 text-center md:px-6 lg:gap-10">
       <div className="space-y-3">
+        <h1>Authentication</h1>
         <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl">
           Welcome to LokVoucher
         </h1>

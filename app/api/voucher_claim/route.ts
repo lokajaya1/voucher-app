@@ -1,61 +1,43 @@
-import { NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
+import { NextRequest, NextResponse } from "next/server";
+import prisma from "@/lib/prisma"; // Sesuaikan dengan path ke file prisma Anda
 
-// GET: Mengambil data klaim dengan relasi user dan voucher
-export async function GET() {
+// Fungsi untuk mengambil data klaim voucher berdasarkan userId
+export async function GET(req: NextRequest) {
   try {
-    const claims = await prisma.voucher_Claim.findMany({
-      include: {
-        voucher: true,
-        user: true,
-      },
-    });
+    // Ambil userId dari query parameter
+    const { searchParams } = new URL(req.url);
+    const userId = searchParams.get("userId");
 
-    const formattedClaims = claims.map((claim) => ({
-      id: claim.id,
-      voucherName: claim.voucher.nama,
-      category: claim.voucher.kategori,
-      claimedAt: claim.tanggal_claim,
-      username: claim.user.username,
-    }));
-
-    return NextResponse.json(formattedClaims);
-  } catch (error) {
-    console.error("Error fetching voucher claims:", error);
-    return NextResponse.json(
-      { message: "Error fetching claims" },
-      { status: 500 }
-    );
-  }
-}
-
-// POST: Menambahkan klaim baru
-export async function POST(req: Request) {
-  try {
-    const { id_voucher, id_user } = await req.json();
-
-    if (!id_voucher || !id_user) {
+    if (!userId) {
       return NextResponse.json(
-        { message: "Voucher ID and User ID are required" },
+        { message: "User ID is required" },
         { status: 400 }
       );
     }
 
-    const newClaim = await prisma.voucher_Claim.create({
-      data: {
-        id_voucher,
-        id_user,
+    // Ambil data klaim voucher dari database menggunakan Prisma
+    const voucherClaims = await prisma.voucher_Claim.findMany({
+      where: {
+        userId: parseInt(userId), // Menggunakan userId sebagai filter
+      },
+      include: {
+        voucher: true, // Sertakan detail voucher yang diklaim
       },
     });
 
-    return NextResponse.json({
-      message: "Voucher claimed successfully",
-      newClaim,
-    });
+    if (voucherClaims.length === 0) {
+      return NextResponse.json(
+        { message: "No claims found for this user" },
+        { status: 404 }
+      );
+    }
+
+    // Kirimkan data klaim voucher ke client
+    return NextResponse.json(voucherClaims, { status: 200 });
   } catch (error) {
-    console.error("Error creating claim:", error);
+    console.error("Error fetching voucher claims:", error);
     return NextResponse.json(
-      { message: "Error creating claim" },
+      { message: "Failed to fetch claimed vouchers" },
       { status: 500 }
     );
   }

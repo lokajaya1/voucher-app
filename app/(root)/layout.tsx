@@ -1,9 +1,7 @@
-import Navbar from "@/components/shared/navbar/Navbar";
+"use client";
 
-export const metadata = {
-  title: "Voucher App",
-  description: "Manage your vouchers and claims",
-};
+import { SessionProvider } from "next-auth/react";
+import Navbar from "@/components/shared/navbar/Navbar";
 
 export default function RootLayout({
   children,
@@ -11,17 +9,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <main className="bg-white text-black">
-      {/* Navbar */}
-      <Navbar />
+    <SessionProvider>
+      <main className="bg-white text-black min-h-screen">
+        <Navbar />
 
-      {/* Layout Body */}
-      <div className="flex">
-        {/* Main Content */}
-        <section className="flex min-h-screen flex-1 flex-col pb-6 pt-6 max-md:pb-14">
-          <div className="mx-auto w-full">{children}</div>
-        </section>
-      </div>
-    </main>
+        <div className="flex">
+          <section className="flex min-h-screen flex-1 flex-col pb-6 pt-6 max-md:pb-14">
+            <div className="mx-auto w-full">{children}</div>
+          </section>
+        </div>
+      </main>
+    </SessionProvider>
   );
 }

@@ -1,3 +1,6 @@
+"use client";
+import { SessionProvider } from "next-auth/react";
+
 export default function AuthLayout({
   children,
 }: {
@@ -13,8 +16,9 @@ export default function AuthLayout({
         height: "100vh",
       }}
     >
-      <h1>Authentication</h1>
-      <div>{children}</div>
+      <div>
+        <SessionProvider>{children}</SessionProvider>
+      </div>
     </div>
   );
 }

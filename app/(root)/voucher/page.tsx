@@ -1,78 +1,123 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import LeftSidebar from "@/components/shared/LeftSidebar";
-import { Voucher } from "@prisma/client"; // Import model Voucher from Prisma
+import { Voucher } from "@prisma/client";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 
 export default function VoucherPage() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
   const [filteredVouchers, setFilteredVouchers] = useState<Voucher[]>([]);
+  const [history, setHistory] = useState<Voucher[]>([]);
   const [category, setCategory] = useState("All");
-  const [history, setHistory] = useState<Voucher[]>([]); // Menyimpan voucher yang diklaim
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [claimingId, setClaimingId] = useState<number | null>(null);
 
   // Fetch vouchers from API
   useEffect(() => {
     const fetchVouchers = async () => {
       try {
+        setLoading(true);
+        setError(null);
         const response = await fetch("/api/voucher");
-        if (!response.ok) throw new Error("Failed to fetch vouchers");
-        const data: Voucher[] = await response.json(); // Menentukan tipe data yang diterima
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch vouchers");
+        }
+
+        const data: Voucher[] = await response.json();
         setVouchers(data);
-        setFilteredVouchers(data); // Set initial filtered vouchers to all vouchers
-      } catch (error) {
-        console.error(error.message);
+        setFilteredVouchers(data);
+      } catch (err) {
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Unknown error occurred while fetching vouchers."
+        );
+        console.error(err);
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchVouchers();
   }, []);
 
+  // Redirect user to login if unauthenticated
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/login");
+    }
+  }, [status, router]);
+
   // Filter vouchers by category
   const handleCategorySelect = (selectedCategory: string) => {
     setCategory(selectedCategory);
-    if (selectedCategory === "All") {
-      setFilteredVouchers(vouchers);
-    } else {
-      setFilteredVouchers(
-        vouchers.filter((voucher) => voucher.kategori === selectedCategory)
-      );
-    }
+    setFilteredVouchers(
+      selectedCategory === "All"
+        ? vouchers
+        : vouchers.filter((voucher) => voucher.kategori === selectedCategory)
+    );
   };
 
   // Handle voucher claim
   const handleClaim = async (id: number) => {
-    const userId = 1; // Ganti dengan ID pengguna yang sedang login
-    try {
-      const claimedVoucher = vouchers.find((voucher) => voucher.id === id);
-      if (!claimedVoucher) {
-        throw new Error("Voucher not found");
-      }
+    if (!session?.user?.id) {
+      console.error("User is not authenticated");
+      return;
+    }
 
-      // Save claim to database
-      const response = await fetch("/api/voucher", {
+    setClaimingId(id); // Set loading state for specific voucher
+    try {
+      const response = await fetch(`/api/voucher/${id}/claim`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, voucherId: id }),
+        body: JSON.stringify({ userId: session.user.id }), // Pastikan userId dikirim dengan benar
       });
 
-      if (!response.ok) throw new Error("Error claiming voucher");
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Error claiming voucher");
+      }
 
-      // Update UI: Add claimed voucher to history and remove from available vouchers
-      setHistory((prevHistory) => [...prevHistory, claimedVoucher]);
+      const result = await response.json();
+      console.log("Claim successful:", result);
 
-      // Remove claimed voucher from available vouchers
-      const updatedVouchers = vouchers.filter((voucher) => voucher.id !== id);
-      setVouchers(updatedVouchers);
-      setFilteredVouchers(
-        updatedVouchers.filter(
-          (voucher) => voucher.kategori === category || category === "All"
-        )
-      );
+      // Update state: remove voucher from filtered list and add to history
+      const claimedVoucher = vouchers.find((voucher) => voucher.id === id);
+      if (claimedVoucher) {
+        setFilteredVouchers((prevVouchers) =>
+          prevVouchers.filter((voucher) => voucher.id !== id)
+        );
+        setHistory((prevHistory) => [...prevHistory, claimedVoucher]);
+      }
     } catch (error) {
       console.error("Error claiming voucher:", error);
+      alert(
+        error instanceof Error ? error.message : "Failed to claim voucher."
+      );
+    } finally {
+      setClaimingId(null); // Clear loading state
     }
   };
+
+  if (loading) {
+    return <p>Loading vouchers...</p>;
+  }
+
+  if (error) {
+    return <p className="text-red-500">{error}</p>;
+  }
+
+  if (!session?.user) {
+    return <p>You must be logged in to view vouchers.</p>;
+  }
 
   return (
     <div className="flex">
@@ -85,6 +130,7 @@ export default function VoucherPage() {
           Available Vouchers
         </h1>
 
+        {/* Display vouchers */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredVouchers.length > 0 ? (
             filteredVouchers.map((voucher) => (
@@ -106,9 +152,14 @@ export default function VoucherPage() {
                   </p>
                   <button
                     onClick={() => handleClaim(voucher.id)}
-                    className="w-full bg-black text-white py-2 rounded-md hover:bg-gray-800"
+                    disabled={claimingId === voucher.id}
+                    className={`w-full py-2 rounded-md ${
+                      claimingId === voucher.id
+                        ? "bg-gray-500 cursor-not-allowed"
+                        : "bg-black text-white hover:bg-gray-800"
+                    }`}
                   >
-                    Claim
+                    {claimingId === voucher.id ? "Claiming..." : "Claim"}
                   </button>
                 </div>
               </div>
@@ -117,18 +168,6 @@ export default function VoucherPage() {
             <p>No vouchers available.</p>
           )}
         </div>
-
-        {/* Display claimed vouchers */}
-        {history.length > 0 && (
-          <div className="mt-10">
-            <h2 className="text-2xl font-bold">Claimed Vouchers</h2>
-            <ul className="list-disc ml-6 mt-2">
-              {history.map((item) => (
-                <li key={item.id}>{item.nama}</li>
-              ))}
-            </ul>
-          </div>
-        )}
       </main>
     </div>
   );
