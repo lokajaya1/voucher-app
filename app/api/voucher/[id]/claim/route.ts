@@ -1,62 +1,77 @@
-import { NextResponse } from "next/server";
-import prisma from "@/lib/prisma"; // pastikan prisma sudah diimpor dengan benar
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 
-export async function POST(req: Request, context: { params: { id: string } }) {
+export async function POST(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  const { id } = params;
+
+  // Validasi awal untuk parameter ID
+  if (!id || isNaN(parseInt(id))) {
+    return NextResponse.json(
+      { error: "ID voucher tidak valid" },
+      { status: 400 }
+    );
+  }
+
   try {
-    // Akses params secara asinkron
-    const { id: voucherIdString } = context.params;
-
-    // Konversi voucherId ke number
-    const voucherId = Number(voucherIdString);
-    if (isNaN(voucherId)) {
-      return NextResponse.json(
-        { message: "Voucher ID must be a valid number" },
-        { status: 400 }
-      );
-    }
-
-    // Parsing body request
-    let body;
-    try {
-      body = await req.json();
-    } catch {
-      return NextResponse.json(
-        { message: "Invalid JSON in request body" },
-        { status: 400 }
-      );
-    }
-
+    // Parse body request
+    const body = await req.json();
     const { userId } = body;
 
     // Validasi userId
-    if (!userId) {
+    if (!userId || isNaN(parseInt(userId))) {
       return NextResponse.json(
-        { message: "User ID is required" },
+        { error: "User ID wajib disertakan dan harus berupa angka" },
         { status: 400 }
       );
     }
 
-    // Membuat klaim voucher di database
-    const voucherClaimed = await prisma.voucher_Claim.create({
-      data: {
-        id_voucher: voucherId, // id voucher
-        id_user: userId, // id user
-        status: "claimed",
-        tanggal_claim: new Date(),
+    const voucherId = parseInt(id);
+    const parsedUserId = parseInt(userId);
+
+    // Cek apakah voucher ada
+    const voucher = await prisma.voucher.findUnique({
+      where: { id: voucherId },
+    });
+
+    if (!voucher) {
+      return NextResponse.json(
+        { error: "Voucher tidak ditemukan" },
+        { status: 404 }
+      );
+    }
+
+    // Cek apakah voucher sudah diklaim oleh user ini
+    const existingClaim = await prisma.voucher_Claim.findFirst({
+      where: {
+        voucherId,
+        userId: parsedUserId,
       },
     });
 
-    return NextResponse.json(
-      { message: "Voucher claimed successfully", data: voucherClaimed },
-      { status: 200 }
-    );
-  } catch (error) {
-    console.error("Error claiming voucher:", error);
-    return NextResponse.json(
-      {
-        message: "Internal Server Error",
-        error: error instanceof Error ? error.message : "Unknown error",
+    if (existingClaim) {
+      return NextResponse.json(
+        { error: "Voucher sudah diklaim oleh user ini" },
+        { status: 400 }
+      );
+    }
+
+    // Jika belum diklaim, klaim voucher
+    const newClaim = await prisma.voucher_Claim.create({
+      data: {
+        voucherId,
+        userId: parsedUserId,
       },
+    });
+
+    // Kembalikan response klaim berhasil
+    return NextResponse.json(newClaim, { status: 201 });
+  } catch (error) {
+    console.error("Error klaim voucher:", error);
+    return NextResponse.json(
+      { error: "Terjadi kesalahan pada server" },
       { status: 500 }
     );
   }

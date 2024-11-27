@@ -68,7 +68,7 @@ export default function VoucherPage() {
 
   // Handle voucher claim
   const handleClaim = async (id: number) => {
-    if (!session?.user) {
+    if (!session?.user?.id) {
       console.error("User is not authenticated");
       return;
     }
@@ -78,6 +78,7 @@ export default function VoucherPage() {
       const response = await fetch(`/api/voucher/${id}/claim`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: session.user.id }), // Pastikan userId dikirim dengan benar
       });
 
       if (!response.ok) {
