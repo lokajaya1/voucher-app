@@ -30,34 +30,38 @@ const LeftSidebar = ({
   };
 
   return (
-    <aside className="w-64 bg-gray-100 custom-scrollbar sticky left-0 top-0 h-screen flex flex-col overflow-y-auto border-r p-6 pt-16 shadow-lg shadow-gray-500/50">
+    <aside className="h-screen p-4 bg-gray-100 shadow-md flex flex-col">
       {/* Kategori */}
-      <div>
+      <div className="flex-grow overflow-y-auto">
         <h2 className="text-lg font-bold mb-4">Categories</h2>
         <ul className="space-y-2">
           {SIDEBAR_LINKS.map((link) => (
             <li key={link.name}>
               <Link
                 href={link.path}
-                className="block rounded-md px-4 py-2 text-gray-600 hover:bg-gray-700 hover:text-white"
-                onClick={() => onCategorySelect(link.name)}
+                className={`block px-4 py-2 rounded-md text-gray-600 transition-all ${
+                  activeCategory === link.name
+                    ? "bg-gray-700 text-white"
+                    : "hover:bg-gray-200"
+                }`}
+                onClick={() => handleCategoryClick(link.name)}
               >
                 {link.name}
               </Link>
             </li>
           ))}
         </ul>
+        <div className="mt-4">
+          <button
+            onClick={handleLogout}
+            className="w-full px-4 py-2 bg-red-500 text-white font-semibold rounded-md hover:bg-red-600 transition-all"
+          >
+            Logout
+          </button>
+        </div>
       </div>
 
       {/* Tombol Logout */}
-      <div className="mt-4">
-        <button
-          onClick={handleLogout} // Menggunakan handleLogout
-          className="w-full px-4 py-2 bg-red-500 text-white font-bold rounded-md hover:bg-red-600"
-        >
-          Logout
-        </button>
-      </div>
     </aside>
   );
 };

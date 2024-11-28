@@ -120,12 +120,14 @@ export default function VoucherPage() {
   }
 
   return (
-    <div className="flex">
-      {/* Left Sidebar */}
-      <LeftSidebar onCategorySelect={handleCategorySelect} />
+    <div className="flex flex-col md:flex-row">
+      {/* Left Sidebar - Only visible on medium and larger screens */}
+      <div className="hidden md:block md:w-1/4">
+        <LeftSidebar onCategorySelect={handleCategorySelect} />
+      </div>
 
       {/* Main Content */}
-      <main className="flex-1 px-2 py-2">
+      <main className="flex-1 px-4 py-2">
         <h1 className="text-3xl font-bold text-center mb-6">
           Available Vouchers
         </h1>

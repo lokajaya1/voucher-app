@@ -1,63 +1,80 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
+import React, { useState } from "react";
+import {
+  Sheet,
+  SheetTrigger,
+  SheetContent,
+  SheetClose,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { Menu } from "lucide-react";
+import LeftSidebar from "../LeftSidebar";
 
-const MobileNav = ({ currentPath }: { currentPath: string }) => {
+interface MobileNavProps {
+  currentPath: string;
+  voucherSummary?: Record<string, number> | null;
+}
+
+// Placeholder component for RightSidebar
+const RightSidebar: React.FC<{ voucherSummary: Record<string, number> }> = ({
+  voucherSummary,
+}) => (
+  <div className="p-4 bg-gray-100 rounded-md">
+    <h3 className="text-lg font-semibold mb-4">Voucher Summary</h3>
+    {Object.entries(voucherSummary).map(([key, value]) => (
+      <div key={key} className="flex justify-between py-2 border-b">
+        <span>{key}</span>
+        <span>{value}</span>
+      </div>
+    ))}
+  </div>
+);
+
+const MobileNav: React.FC<MobileNavProps> = ({
+  currentPath,
+  voucherSummary = null,
+}) => {
   const [isOpen, setIsOpen] = useState(false);
 
-  const toggleMenu = () => {
-    setIsOpen(!isOpen);
+  const renderSidebarContent = () => {
+    switch (currentPath) {
+      case "/voucher":
+        return <LeftSidebar onCategorySelect={() => setIsOpen(false)} />;
+      case "/history":
+        return voucherSummary ? (
+          <RightSidebar voucherSummary={voucherSummary} />
+        ) : (
+          <p className="text-gray-500 text-sm">Loading voucher summary...</p>
+        );
+      default:
+        return null;
+    }
   };
 
   return (
-    <div className="relative">
-      {/* Hamburger Button */}
-      <button
-        className="text-white focus:outline-none"
-        onClick={toggleMenu}
-        aria-label="Toggle Menu"
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          strokeWidth="2"
-          stroke="currentColor"
-          className="w-6 h-6"
+    <Sheet open={isOpen} onOpenChange={setIsOpen}>
+      <SheetTrigger asChild>
+        <button
+          className="text-white hover:bg-gray-700/30 p-2 rounded-md focus:outline-none transition-colors"
+          aria-label="Toggle Menu"
         >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M3.75 6h16.5M3.75 12h16.5M3.75 18h16.5"
-          />
-        </svg>
-      </button>
+          <Menu className="w-6 h-6" />
+        </button>
+      </SheetTrigger>
 
-      {/* Dropdown Menu */}
-      {isOpen && (
-        <div className="absolute right-0 mt-2 w-48 bg-white text-black rounded-md shadow-lg">
-          {currentPath !== "/voucher" && (
-            <Link
-              href="/voucher"
-              className="block px-4 py-2 hover:bg-gray-100"
-              onClick={toggleMenu}
-            >
-              Vouchers
-            </Link>
-          )}
-          {currentPath !== "/history" && (
-            <Link
-              href="/history"
-              className="block px-4 py-2 hover:bg-gray-100"
-              onClick={toggleMenu}
-            >
-              History
-            </Link>
-          )}
-        </div>
-      )}
-    </div>
+      <SheetContent
+        side="left"
+        className="p-4 bg-white rounded-lg shadow-lg max-w-[250px] overflow-y-auto"
+      >
+        <SheetHeader className="mb-4">
+          <SheetTitle className="text-xl font-bold">LokVoucher</SheetTitle>
+        </SheetHeader>
+
+        {renderSidebarContent()}
+      </SheetContent>
+    </Sheet>
   );
 };
 
