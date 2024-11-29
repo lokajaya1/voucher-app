@@ -43,7 +43,7 @@ Follow these steps to set up the project locally:
 1. **Clone the repository**:
 
    ```bash
-   git clone https://github.com/yourusername/lokvoucher.git](https://github.com/lokajaya1/voucher-app.git
+   git clone https://github.com/lokajaya1/voucher-app.git
    cd voucher-app
    ```
 
