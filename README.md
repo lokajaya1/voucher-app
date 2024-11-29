@@ -55,9 +55,7 @@ Follow these steps to set up the project locally:
 
 3. **Install dependencies**:
 
-   ```bash
    Set up environment variables
-   ```
 
 4. **Migrate the database**:
 
