@@ -30,9 +30,9 @@ const LeftSidebar = ({
   };
 
   return (
-    <aside className="h-screen p-4 bg-gray-100 shadow-md flex flex-col">
+    <aside className="h-screen flex flex-col bg-gray-100 shadow-md">
       {/* Kategori */}
-      <div className="flex-grow overflow-y-auto">
+      <div className="flex-grow overflow-y-auto p-4">
         <h2 className="text-lg font-bold mb-4">Categories</h2>
         <ul className="space-y-2">
           {SIDEBAR_LINKS.map((link) => (
@@ -60,8 +60,6 @@ const LeftSidebar = ({
           </button>
         </div>
       </div>
-
-      {/* Tombol Logout */}
     </aside>
   );
 };

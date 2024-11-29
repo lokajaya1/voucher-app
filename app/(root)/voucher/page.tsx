@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
 import { useState, useEffect } from "react";
@@ -25,8 +26,8 @@ export default function VoucherPage() {
       try {
         setLoading(true);
         setError(null);
-        const response = await fetch("/api/voucher");
 
+        const response = await fetch("/api/voucher");
         if (!response.ok) {
           throw new Error("Failed to fetch vouchers");
         }
@@ -78,7 +79,7 @@ export default function VoucherPage() {
       const response = await fetch(`/api/voucher/${id}/claim`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: session.user.id }), // Pastikan userId dikirim dengan benar
+        body: JSON.stringify({ userId: session.user.id }),
       });
 
       if (!response.ok) {
@@ -86,10 +87,6 @@ export default function VoucherPage() {
         throw new Error(errorData.message || "Error claiming voucher");
       }
 
-      const result = await response.json();
-      console.log("Claim successful:", result);
-
-      // Update state: remove voucher from filtered list and add to history
       const claimedVoucher = vouchers.find((voucher) => voucher.id === id);
       if (claimedVoucher) {
         setFilteredVouchers((prevVouchers) =>
@@ -121,13 +118,15 @@ export default function VoucherPage() {
 
   return (
     <div className="flex flex-col md:flex-row">
-      {/* Left Sidebar - Only visible on medium and larger screens */}
+      {/* Left Sidebar */}
       <div className="hidden md:block md:w-1/4">
-        <LeftSidebar onCategorySelect={handleCategorySelect} />
+        <div className="sticky top-0 h-screen">
+          <LeftSidebar onCategorySelect={handleCategorySelect} />
+        </div>
       </div>
 
       {/* Main Content */}
-      <main className="flex-1 px-4 py-2">
+      <main className="flex-1 px-4 py-2 overflow-y-auto">
         <h1 className="text-3xl font-bold text-center mb-6">
           Available Vouchers
         </h1>
