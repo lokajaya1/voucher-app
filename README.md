@@ -4,6 +4,14 @@ LokVoucher is a web application designed to manage and claim vouchers with ease.
 
 ---
 
+## Screenshots
+
+![auth](public/images/voucherApp.png)  
+![Interface](public/images/voucherApp2.png) 
+![Interface](public/images/voucherApp3.png)
+
+---
+
 ## Features
 
 - **Authentication**:
