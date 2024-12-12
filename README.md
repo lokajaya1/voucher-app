@@ -38,7 +38,7 @@ LokVoucher is a web application designed to manage and claim vouchers with ease.
   - [NextAuth](https://next-auth.js.org/) for authentication
   - [Prisma](https://www.prisma.io/) as ORM for database management
 - **Database**:
-  - PostgreSQL (or any database supported by Prisma)
+  - MySQL
 - **Deployment**:
   - Vercel for hosting
 
